@@ -43,7 +43,7 @@ public:
 
 			// update the position of the corresponding vertex
 			p.position += p.velocity * elapsed.asSeconds();
-			updateVerticesPos(i*4, p.position);
+			updateVerticesPos(i*4, p);
 
 			// update the alpha (transparency) of the particle according to its lifetime
 			float ratio = p.lifetime.asSeconds() / m_lifetime.asSeconds();
@@ -72,14 +72,15 @@ private:
 		sf::Vector2f velocity;
 		sf::Time lifetime;
 		sf::Vector2f position;
-		float size;
+		float size = 5;
 	};
 
-	void updateVerticesPos(int index , sf::Vector2f pos) {
-		m_vertices[index].position = pos + sf::Vector2f(-1, -1);
-		m_vertices[index+1].position = pos + sf::Vector2f(1, -1);
-		m_vertices[index+2].position = pos + sf::Vector2f(1, 1);
-		m_vertices[index+3].position = pos + sf::Vector2f(-1, 1);
+	void updateVerticesPos(int index , Particle &p) {
+		float size = p.size / 2;
+		m_vertices[index].position = p.position + sf::Vector2f(-size, -size);
+		m_vertices[index+1].position = p.position + sf::Vector2f(size, -size);
+		m_vertices[index+2].position = p.position + sf::Vector2f(size, size);
+		m_vertices[index+3].position = p.position + sf::Vector2f(-size, size);
 	}
 
 	void updateVerticesColor(int index, sf::Uint8 alpha) {
