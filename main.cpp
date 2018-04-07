@@ -70,9 +70,9 @@ private:
 	struct Particle
 	{
 		sf::Vector2f velocity;
-		sf::Time lifetime;
-		sf::Vector2f position;
-		float size = 5;
+		sf::Time lifetime = sf::milliseconds((std::rand() % 2000) + 1000);
+		sf::Vector2f position = sf::Vector2f(-20,-20);
+		float size = 15;
 	};
 
 	void updateVerticesPos(int index , Particle &p) {
@@ -95,13 +95,14 @@ private:
 		// give a random velocity and lifetime to the particle
 		std::random_device rd;
 		std::mt19937 gen(rd());
-		std::uniform_int_distribution<int> dis(-135, -45);
+		std::uniform_int_distribution<int> disAngle(-130, -50);
+		std::uniform_int_distribution<int> disEmitter(-200, 200);
 
-		float angle = (dis(gen) * 3.14f / 180.f);
-		float speed = (std::rand() % 50) + 50.f;
+		float angle = (disAngle(gen) * 3.14f / 180.f);
+		float speed = (std::rand() % 150) + 150.f;
 		m_particles[index].velocity = sf::Vector2f(std::cos(angle) * speed, std::sin(angle) * speed);
 		m_particles[index].lifetime = sf::milliseconds((std::rand() % 2000) + 1000);
-		m_particles[index].position = m_emitter;
+		m_particles[index].position = m_emitter; //+ sf::Vector2f(disEmitter(gen),0);
 
 		// reset the position of the corresponding vertex
 		//m_vertices[index].position = m_emitter;
@@ -115,11 +116,23 @@ private:
 
 int main()
 {
+	sf::Text fpsText;
+	sf::Font font;
+	if (!font.loadFromFile("arial.ttf")) {
+		std::cout << "Couldn't load font!" << std::endl;
+	}
+	fpsText.setFont(font);
+	fpsText.setCharacterSize(50);
+	fpsText.setFillColor(sf::Color::Green);
+	fpsText.setPosition(10, 10);
+
+	bool spacePressed = false;
+	unsigned int particleCount = 1000;
 	// create the window
 	sf::RenderWindow window(sf::VideoMode(1280, 720), "Particles");
 
 	// create the particle system
-	ParticleSystem particles(1000);
+	ParticleSystem particles(particleCount);
 
 	// create a clock to track the elapsed time
 	sf::Clock clock;
@@ -137,15 +150,29 @@ int main()
 
 		// make the particle system emitter follow the mouse
 		sf::Vector2i mouse = sf::Mouse::getPosition(window);
-		particles.setEmitter(window.mapPixelToCoords(mouse));
+		particles.setEmitter(sf::Vector2f(640,720));
+
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
+			if (!spacePressed) {
+				particleCount *= 2;
+				particles = ParticleSystem(particleCount);
+				std::cout << "particleCount: " << particleCount << std::endl;
+			}
+			spacePressed = true;
+		}
+		else {
+			spacePressed = false;
+		}
 
 		// update it
 		sf::Time elapsed = clock.restart();
+		fpsText.setString(std::to_string(static_cast<int>(std::round(1.0f /elapsed.asSeconds()))));
 		particles.update(elapsed);
 
 		// draw it
 		window.clear();
 		window.draw(particles);
+		window.draw(fpsText);
 		window.display();
 	}
 
