@@ -16,18 +16,76 @@
 #define PI  3.14159265f
 #endif
 
+float StaticZero(float p) {
+	return 0;
+}
+
+float StaticOne(float p) {
+	return 1;
+}
+
+float Linear(float p) {
+	return p;
+}
+
+float QuadraticEaseIn(float p)
+{
+	return p * p;
+}
+
+float QuadraticEaseOut(float p)
+{
+	return -(p * (p - 2));
+}
+
+// Modeled after quarter-cycle of sine wave
+float SineEaseIn(float p)
+{
+	return sinf((p - 1) * PI) + 1;
+}
+
+// Modeled after quarter-cycle of sine wave (different phase)
+float SineEaseOut(float p)
+{
+	return sinf(p * PI);
+}
+
+// Modeled after half sine wave
+float SineEaseInOut(float p)
+{
+	return 0.5 * (1 - cosf(p * PI));
+}
+
+// Modeled after shifted quadrant IV of unit circle
+float CircularEaseIn(float p)
+{
+	return 1 - sqrt(1 - (p * p));
+}
+
+// Modeled after shifted quadrant II of unit circle
+float CircularEaseOut(float p)
+{
+	return sqrt((2 - p) * p);
+}
+
+
 class ParticleSystem : public sf::Drawable, public sf::Transformable
 {
 public:
 
-	ParticleSystem(unsigned int count) :
+	ParticleSystem(unsigned int count, int angle, sf::Texture *texture, float(*sizeM)(float), float(*speedM)(float), float(*rotationM)(float)) :
 		m_particles(count),
 		m_vertices(sf::Quads, count * 4),
 		//testsquare(sf::Quads, 4),
 		m_lifetime(sf::seconds(3)),
-		m_emitter(0, 0)
+		m_emitter(0, 0),
+		m_texture(texture),
+		emitAngle(angle),
+		sizeMod(sizeM),
+		speedMod(speedM),
+		rotationMod(rotationM)
 	{
-		m_texture.loadFromFile("fire.png");
+		setRate(currentCount);
 	}
 
 	void setEmitter(sf::Vector2f position)
@@ -35,30 +93,47 @@ public:
 		m_emitter = position;
 	}
 
+	void setRate(unsigned int count)
+	{
+		m_particles.resize(count);
+		currentCount = count;
+		m_vertices.resize(count * 4);
+		for (std::size_t i = 0; i < m_particles.size(); i++) {
+			if (i < count) {
+				m_particles[i].alive = true;
+			}
+			else {
+				m_particles[i] = Particle();
+			}
+		}
+	}
+
 	void update(sf::Time elapsed)
 	{
-		for (std::size_t i = 0; i < m_particles.size(); ++i)
+		for (int i = 0; i < currentCount; ++i)
 		{
 			// update the particle lifetime
 			Particle& p = m_particles[i];
-			p.lifetime -= elapsed;
+			if (p.alive) {
+				p.lifetime -= elapsed;
 
-			// if the particle is dead, respawn it
-			if (p.lifetime <= sf::Time::Zero)
-				resetParticle(i);
+				// if the particle is dead, respawn it
+				if (p.lifetime <= sf::Time::Zero)
+					resetParticle(i);
 
-			// update the alpha (transparency) of the particle according to its lifetime
-			float ratio = p.lifetime.asSeconds() / m_lifetime.asSeconds();
-			//updateVerticesAlpha(i*4, static_cast<sf::Uint8>(ratio * 255));
-			p.color.g = static_cast<sf::Uint8>(ratio * 255);
-			p.color.a = static_cast<sf::Uint8>(ratio * 255);
-			updateVerticesColor(i*4, p.color);
+				// update the alpha (transparency) of the particle according to its lifetime
+				float ratio = 1 - p.lifetime.asSeconds() / m_lifetime.asSeconds();
+				//updateVerticesAlpha(i*4, static_cast<sf::Uint8>(ratio * 255));
+				p.color.g = static_cast<sf::Uint8>((1 - ratio) * 255);
+				p.color.a = static_cast<sf::Uint8>((1 - ratio) * 255);
+				updateVerticesColor(i * 4, p.color);
 
-			// update the position of the corresponding vertex
-			p.position += (p.velocity - p.velocity * ratio) * elapsed.asSeconds();
-			p.size = baseSize/2 + ratio * baseSize;
-			p.rotation += (PI / 4) * elapsed.asSeconds();
-			updateVerticesPosition(i * 4, p);
+				// update the position of the corresponding vertex
+				p.position += p.velocity * speedMod(ratio) * elapsed.asSeconds();
+				p.size = sizeMod(ratio) * baseSize;
+				p.rotation += (2 * PI) * rotationMod(ratio) * elapsed.asSeconds();
+				updateVerticesPosition(i * 4, p);
+			}
 		}
 
 		//testRotation += (PI / 4) * elapsed.asSeconds();
@@ -91,7 +166,7 @@ private:
 		states.transform *= getTransform();
 
 		// our particles don't use a texture
-		states.texture = &m_texture;
+		states.texture = m_texture;
 		//states.texture = NULL;
 
 		// draw the vertex array
@@ -105,11 +180,12 @@ private:
 	{
 		sf::Vector2f velocity;
 		sf::Time lifetime = sf::milliseconds((std::rand() % 2000) + 1000);
-		sf::Vector2f position = sf::Vector2f(-20,-20);
+		sf::Vector2f position = sf::Vector2f(-100,-100);
 		float rotation = 0;
 		float size = 25;
 		sf::Color color = sf::Color::Red;
 		sf::Transform transform;
+		bool alive = false;
 	};
 
 	void updateVerticesPosition(int index , Particle &p) {
@@ -143,9 +219,9 @@ private:
 		m_vertices[index + 3].color = color;
 
 		m_vertices[index].texCoords = sf::Vector2f(0, 0);
-		m_vertices[index+1].texCoords = sf::Vector2f(250, 0);
-		m_vertices[index+2].texCoords = sf::Vector2f(250, 170);
-		m_vertices[index+3].texCoords = sf::Vector2f(0, 170);
+		m_vertices[index+1].texCoords = sf::Vector2f(256, 0);
+		m_vertices[index+2].texCoords = sf::Vector2f(256, 256);
+		m_vertices[index+3].texCoords = sf::Vector2f(0, 256);
 
 	}
 
@@ -167,11 +243,11 @@ private:
 		// give a random velocity and lifetime to the particle
 		std::random_device rd;
 		std::mt19937 gen(rd());
-		std::uniform_int_distribution<int> disAngle(-130, -50);
+		std::uniform_int_distribution<int> disAngle(-emitAngle/2 - 90, emitAngle/2 - 90);
 		std::uniform_int_distribution<int> disEmitter(-200, 200);
 
 		float angle = (disAngle(gen) * 3.14f / 180.f);
-		float speed = (std::rand() % 150) + 150.f;
+		float speed = 400;//(std::rand() % 150) + 150.f;
 		m_particles[index].velocity = sf::Vector2f(std::cos(angle) * speed, std::sin(angle) * speed);
 		m_particles[index].lifetime = sf::milliseconds((std::rand() % 2000) + 1000);
 		m_particles[index].position = m_emitter; //+ sf::Vector2f(disEmitter(gen),0);
@@ -184,7 +260,12 @@ private:
 	sf::Time m_lifetime;
 	sf::Vector2f m_emitter;
 	float baseSize = 100;
-	sf::Texture m_texture;
+	int emitAngle = 90;
+	sf::Texture *m_texture;
+	unsigned int currentCount = 100;
+	float(*sizeMod)(float);
+	float(*speedMod)(float);
+	float(*rotationMod)(float);
 
 	//sf::VertexArray testsquare;
 	//sf::Transform testTransform;
@@ -203,17 +284,37 @@ int main()
 	fpsText.setFillColor(sf::Color::Green);
 	fpsText.setPosition(10, 10);
 
+	sf::Text countText;
+	countText.setFont(font);
+	countText.setCharacterSize(50);
+	countText.setFillColor(sf::Color::Blue);
+	countText.setPosition(640, 10);
+
 	bool spacePressed = false;
 	unsigned int particleCount = 100;
+	countText.setString("Particle count: " + std::to_string(particleCount));
 	// create the window
 	sf::RenderWindow window(sf::VideoMode(1280, 720), "Particles");
 	//window.setFramerateLimit(60);
 
-	// create the particle system
-	ParticleSystem particles1(particleCount);
-	ParticleSystem particles2(particleCount);
-	ParticleSystem particles3(particleCount);
-	ParticleSystem particles4(particleCount);
+	sf::Texture texture1;
+	texture1.loadFromFile("Textures/Flame_01.png");
+
+	sf::Texture texture2;
+	texture2.loadFromFile("Textures/Star_33.png");
+
+	sf::Texture texture3;
+	texture3.loadFromFile("Textures/Trail_01.png");
+
+	sf::Texture texture4;
+	texture4.loadFromFile("Textures/Decal_07.png");
+
+
+	// create the particle system                     //size            //speed          //rotation
+	ParticleSystem particles1(10000, 30, &texture1, QuadraticEaseIn, QuadraticEaseIn, StaticZero);
+	ParticleSystem particles2(10000, 60, &texture2, QuadraticEaseIn, QuadraticEaseIn, StaticZero);
+	ParticleSystem particles3(10000, 90, &texture3, QuadraticEaseIn, SineEaseInOut, StaticZero);
+	ParticleSystem particles4(10000, 120, &texture4, SineEaseOut, QuadraticEaseIn, StaticZero);
 
 	// create a clock to track the elapsed time
 	sf::Clock clock;
@@ -239,11 +340,11 @@ int main()
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
 			if (!spacePressed) {
 				particleCount *= 2;
-				particles1 = ParticleSystem(particleCount);
-				particles2 = ParticleSystem(particleCount);
-				particles3 = ParticleSystem(particleCount);
-				particles4 = ParticleSystem(particleCount);
-				std::cout << "particleCount: " << particleCount << std::endl;
+				particles1.setRate(particleCount);
+				particles2.setRate(particleCount);
+				particles3.setRate(particleCount);
+				particles4.setRate(particleCount);
+				countText.setString("Particle count: " + std::to_string(particleCount));
 			}
 			spacePressed = true;
 		}
@@ -266,6 +367,7 @@ int main()
 		window.draw(particles3);
 		window.draw(particles4);
 		window.draw(fpsText);
+		window.draw(countText);
 		window.display();
 	}
 
