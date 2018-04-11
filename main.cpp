@@ -288,11 +288,38 @@ int main()
 	countText.setFont(font);
 	countText.setCharacterSize(50);
 	countText.setFillColor(sf::Color::Blue);
-	countText.setPosition(640, 10);
+	countText.setPosition(480, 10);
 
-	bool spacePressed = false;
+	sf::Text label1;
+	label1.setFont(font);
+	label1.setCharacterSize(50);
+	label1.setFillColor(sf::Color::Blue);
+	label1.setPosition(128, 400);
+
+	sf::Text label2;
+	label2.setFont(font);
+	label2.setCharacterSize(50);
+	label2.setFillColor(sf::Color::Blue);
+	label2.setPosition(386, 480);
+
+	sf::Text label3;
+	label3.setFont(font);
+	label3.setCharacterSize(50);
+	label3.setFillColor(sf::Color::Blue);
+	label3.setPosition(640, 400);
+
+	sf::Text label4;
+	label4.setFont(font);
+	label4.setCharacterSize(50);
+	label4.setFillColor(sf::Color::Blue);
+	label4.setPosition(896, 480);
+
+	bool upPressed = false;
+	bool downPressed = false;
 	unsigned int particleCount = 100;
-	countText.setString("Particle count: " + std::to_string(particleCount));
+
+	countText.setString("Particle count per system: " + std::to_string(particleCount));
+	
 	// create the window
 	sf::RenderWindow window(sf::VideoMode(1280, 720), "Particles");
 	//window.setFramerateLimit(60);
@@ -311,10 +338,19 @@ int main()
 
 
 	// create the particle system                     //size            //speed          //rotation
-	ParticleSystem particles1(10000, 30, &texture1, QuadraticEaseIn, QuadraticEaseIn, StaticZero);
-	ParticleSystem particles2(10000, 60, &texture2, QuadraticEaseIn, QuadraticEaseIn, StaticZero);
-	ParticleSystem particles3(10000, 90, &texture3, QuadraticEaseIn, SineEaseInOut, StaticZero);
-	ParticleSystem particles4(10000, 120, &texture4, SineEaseOut, QuadraticEaseIn, StaticZero);
+	ParticleSystem particles1(10000, 20, &texture1, QuadraticEaseIn, QuadraticEaseIn, QuadraticEaseIn);
+	label1.setString("Quadratic on all");
+	ParticleSystem particles2(10000, 90, &texture2, Linear, Linear, Linear);
+	label2.setString("Linear on all");
+	ParticleSystem particles3(10000, 180, &texture3, StaticOne, StaticOne, StaticZero);
+	label3.setString("Static values");
+	ParticleSystem particles4(10000, 360, &texture4, SineEaseOut, Linear, SineEaseOut);
+	label4.setString("SineEaseOut \n size and rotation");
+
+	particles1.setEmitter(sf::Vector2f(256, 360));
+	particles2.setEmitter(sf::Vector2f(512, 360));
+	particles3.setEmitter(sf::Vector2f(768, 360));
+	particles4.setEmitter(sf::Vector2f(1024, 360));
 
 	// create a clock to track the elapsed time
 	sf::Clock clock;
@@ -332,24 +368,34 @@ int main()
 
 		// make the particle system emitter follow the mouse
 		sf::Vector2i mouse = sf::Mouse::getPosition(window);
-		particles1.setEmitter(sf::Vector2f(256,720));
-		particles2.setEmitter(sf::Vector2f(512, 720));
-		particles3.setEmitter(sf::Vector2f(768, 720));
-		particles4.setEmitter(sf::Vector2f(1024, 720));
 
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
-			if (!spacePressed) {
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
+			if (!upPressed) {
 				particleCount *= 2;
 				particles1.setRate(particleCount);
 				particles2.setRate(particleCount);
 				particles3.setRate(particleCount);
 				particles4.setRate(particleCount);
-				countText.setString("Particle count: " + std::to_string(particleCount));
+				countText.setString("Particle count per system: " + std::to_string(particleCount));
 			}
-			spacePressed = true;
+			upPressed = true;
 		}
 		else {
-			spacePressed = false;
+			upPressed = false;
+		}
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+			if (!downPressed) {
+				particleCount /= 2;
+				particles1.setRate(particleCount);
+				particles2.setRate(particleCount);
+				particles3.setRate(particleCount);
+				particles4.setRate(particleCount);
+				countText.setString("Particle count per system: " + std::to_string(particleCount));
+			}
+			downPressed = true;
+		}
+		else {
+			downPressed = false;
 		}
 
 		// update it
@@ -368,6 +414,10 @@ int main()
 		window.draw(particles4);
 		window.draw(fpsText);
 		window.draw(countText);
+		window.draw(label1);
+		window.draw(label2);
+		window.draw(label3);
+		window.draw(label4);
 		window.display();
 	}
 
