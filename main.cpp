@@ -85,6 +85,7 @@ public:
 		speedMod(speedM),
 		rotationMod(rotationM)
 	{
+		m_shader.loadFromFile("shader.vert", "shader.frag");
 		setRate(currentCount);
 	}
 
@@ -96,16 +97,29 @@ public:
 	void setRate(unsigned int count)
 	{
 		m_particles.resize(count);
+		m_rotations.resize(count);
 		currentCount = count;
 		m_vertices.resize(count * 4);
+
 		for (std::size_t i = 0; i < m_particles.size(); i++) {
 			if (i < count) {
 				m_particles[i].alive = true;
+				//m_particles[i].color = uintToColor(i);
 			}
 			else {
 				m_particles[i] = Particle();
+				//m_particles[i].color = uintToColor(i);
 			}
 		}
+	}
+
+	sf::Color uintToColor(unsigned int value) {
+		sf::Color indicesConversion;
+		indicesConversion.r = value & 0x11;
+		indicesConversion.g = value & 0x1100;
+		indicesConversion.b = value & 0x110000;
+		indicesConversion.a = value & 0x11000000;
+		return indicesConversion;
 	}
 
 	void update(sf::Time elapsed)
@@ -121,7 +135,7 @@ public:
 				if (p.lifetime <= sf::Time::Zero)
 					resetParticle(i);
 
-				// update the alpha (transparency) of the particle according to its lifetime
+				//// update the alpha (transparency) of the particle according to its lifetime
 				float ratio = 1 - p.lifetime.asSeconds() / m_lifetime.asSeconds();
 				//updateVerticesAlpha(i*4, static_cast<sf::Uint8>(ratio * 255));
 				p.color.g = static_cast<sf::Uint8>((1 - ratio) * 255);
@@ -132,10 +146,13 @@ public:
 				p.position += p.velocity * speedMod(ratio) * elapsed.asSeconds();
 				p.size = sizeMod(ratio) * baseSize;
 				p.rotation += (2 * PI) * rotationMod(ratio) * elapsed.asSeconds();
+				m_rotations[i] = p.rotation;
 				updateVerticesPosition(i * 4, p);
 			}
 		}
 
+		totalTime += elapsed.asSeconds();
+		m_shader.setUniform("dt", totalTime);
 		//testRotation += (PI / 4) * elapsed.asSeconds();
 		//sf::Vector2f testPosition(640, 320);
 		//testTransform.rotate(3, testPosition);
@@ -165,9 +182,10 @@ private:
 		// apply the transform
 		states.transform *= getTransform();
 
-		// our particles don't use a texture
 		states.texture = m_texture;
 		//states.texture = NULL;
+
+		states.shader = &m_shader;
 
 		// draw the vertex array
 		target.draw(m_vertices, states);
@@ -201,10 +219,10 @@ private:
 		m_vertices[index+2].position = sf::Vector2f(size, size);
 		m_vertices[index+3].position = sf::Vector2f(-size, size);
 
-		rotateVector(m_vertices[index].position, p.rotation);
-		rotateVector(m_vertices[index+1].position, p.rotation);
-		rotateVector(m_vertices[index+2].position, p.rotation);
-		rotateVector(m_vertices[index+3].position, p.rotation);
+		//rotateVector(m_vertices[index].position, p.rotation);
+		//rotateVector(m_vertices[index+1].position, p.rotation);
+		//rotateVector(m_vertices[index+2].position, p.rotation);
+		//rotateVector(m_vertices[index+3].position, p.rotation);
 
 		m_vertices[index].position += p.position;
 		m_vertices[index + 1].position += p.position;
@@ -256,6 +274,7 @@ private:
 	}
 
 	std::vector<Particle> m_particles;
+	std::vector<float> m_rotations;
 	sf::VertexArray m_vertices;
 	sf::Time m_lifetime;
 	sf::Vector2f m_emitter;
@@ -266,6 +285,8 @@ private:
 	float(*sizeMod)(float);
 	float(*speedMod)(float);
 	float(*rotationMod)(float);
+	sf::Shader m_shader;
+	float totalTime = 0;
 
 	//sf::VertexArray testsquare;
 	//sf::Transform testTransform;
