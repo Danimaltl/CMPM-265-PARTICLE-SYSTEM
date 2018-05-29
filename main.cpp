@@ -85,7 +85,6 @@ public:
 		speedMod(speedM),
 		rotationMod(rotationM)
 	{
-		m_shader.loadFromFile("shader.vert", "shader.frag");
 		setRate(currentCount);
 	}
 
@@ -152,7 +151,6 @@ public:
 		}
 
 		totalTime += elapsed.asSeconds();
-		m_shader.setUniform("dt", totalTime);
 		//testRotation += (PI / 4) * elapsed.asSeconds();
 		//sf::Vector2f testPosition(640, 320);
 		//testTransform.rotate(3, testPosition);
@@ -184,8 +182,6 @@ private:
 
 		states.texture = m_texture;
 		//states.texture = NULL;
-
-		states.shader = &m_shader;
 
 		// draw the vertex array
 		target.draw(m_vertices, states);
@@ -285,7 +281,6 @@ private:
 	float(*sizeMod)(float);
 	float(*speedMod)(float);
 	float(*rotationMod)(float);
-	sf::Shader m_shader;
 	float totalTime = 0;
 
 	//sf::VertexArray testsquare;
@@ -341,8 +336,11 @@ int main()
 
 	countText.setString("Particle count per system: " + std::to_string(particleCount));
 	
+	sf::ContextSettings settings;
+	settings.antialiasingLevel = 8;
+
 	// create the window
-	sf::RenderWindow window(sf::VideoMode(1280, 720), "Particles");
+	sf::RenderWindow window(sf::VideoMode(1280, 720), "Particles", sf::Style::Default, settings);
 	//window.setFramerateLimit(60);
 
 	sf::Texture texture1;
@@ -375,6 +373,15 @@ int main()
 
 	// create a clock to track the elapsed time
 	sf::Clock clock;
+
+	sf::Sprite renderSprite;
+
+	sf::Texture renderTexture;
+	renderTexture.create(1280, 720);
+
+	sf::Shader shader;
+	shader.loadFromFile("shader.frag", sf::Shader::Fragment);
+	shader.setUniform("texture", sf::Shader::CurrentTexture);
 
 	// run the main loop
 	while (window.isOpen())
@@ -439,6 +446,9 @@ int main()
 		window.draw(label2);
 		window.draw(label3);
 		window.draw(label4);
+		renderTexture.update(window);
+		renderSprite.setTexture(renderTexture);
+		window.draw(renderSprite, &shader);
 		window.display();
 	}
 
