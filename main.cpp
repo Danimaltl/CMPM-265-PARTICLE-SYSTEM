@@ -215,10 +215,10 @@ private:
 		m_vertices[index+2].position = sf::Vector2f(size, size);
 		m_vertices[index+3].position = sf::Vector2f(-size, size);
 
-		//rotateVector(m_vertices[index].position, p.rotation);
-		//rotateVector(m_vertices[index+1].position, p.rotation);
-		//rotateVector(m_vertices[index+2].position, p.rotation);
-		//rotateVector(m_vertices[index+3].position, p.rotation);
+		rotateVector(m_vertices[index].position, p.rotation);
+		rotateVector(m_vertices[index+1].position, p.rotation);
+		rotateVector(m_vertices[index+2].position, p.rotation);
+		rotateVector(m_vertices[index+3].position, p.rotation);
 
 		m_vertices[index].position += p.position;
 		m_vertices[index + 1].position += p.position;
@@ -381,7 +381,10 @@ int main()
 
 	sf::Shader shader;
 	shader.loadFromFile("shader.frag", sf::Shader::Fragment);
+	shader.setUniform("resolution", sf::Glsl::Vec2(1280,720));
 	shader.setUniform("texture", sf::Shader::CurrentTexture);
+
+	float time = 0.0f;
 
 	// run the main loop
 	while (window.isOpen())
@@ -428,6 +431,8 @@ int main()
 
 		// update it
 		sf::Time elapsed = clock.restart();
+		time += elapsed.asSeconds();
+		shader.setUniform("time", time);
 		fpsText.setString(std::to_string(static_cast<int>(std::round(1.0f /elapsed.asSeconds()))));
 		particles1.update(elapsed);
 		particles2.update(elapsed);
